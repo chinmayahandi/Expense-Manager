@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import MobileNavbar from "../components/MobileNavbar";
 import Header from "../components/Header";
 import Toast from "../components/Toast";
+import Footer from "../components/Footer";
 import { useExpense } from "../context/ExpenseContext";
 
 const MainLayout = () => {
@@ -23,6 +24,9 @@ const MainLayout = () => {
         <main className="flex-grow px-6 py-2 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>
+
+        {/* Footer */}
+        <Footer />
       </div>
 
       {/* Mobile Navigation bar */}
