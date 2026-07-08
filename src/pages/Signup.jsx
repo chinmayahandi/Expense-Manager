@@ -48,8 +48,8 @@ const Signup = () => {
     setIsSubmitting(true);
     try {
       await register(name, email, password);
-      showToast("Profile created successfully! Welcoming you to SpendWise.", "success");
-      navigate("/dashboard");
+      showToast("Profile created successfully! Please check your email to verify your account.", "success");
+      navigate(`/check-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       console.error("Signup failure:", err);
       const errMsg = err.response?.data?.message || err.message || "Failed to register";

@@ -16,6 +16,9 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const CheckEmail = lazy(() => import("./pages/CheckEmail"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const EmailVerified = lazy(() => import("./pages/EmailVerified"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function App() {
@@ -44,6 +47,9 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/check-email" element={<CheckEmail />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/email-verified" element={<EmailVerified />} />
 
               {/* 404 Catch All Route */}
               <Route path="*" element={<NotFound />} />
@@ -56,3 +62,4 @@ function App() {
 }
 
 export default App;
+

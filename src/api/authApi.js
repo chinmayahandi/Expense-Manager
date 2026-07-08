@@ -24,7 +24,32 @@ const authApi = {
   getMe: async () => {
     const response = await axiosInstance.get("/auth/me");
     return response.data;
+  },
+
+  // Forgot password
+  forgotPassword: async (email) => {
+    const response = await axiosInstance.post("/auth/forgot-password", {
+      email
+    });
+    return response.data;
+  },
+
+  // Reset password using token
+  resetPassword: async (token, password) => {
+    const response = await axiosInstance.post(`/auth/reset-password/${token}`, {
+      password
+    });
+    return response.data;
+  },
+
+  // Resend email verification
+  resendVerification: async (email) => {
+    const response = await axiosInstance.post("/auth/resend-verification", {
+      email
+    });
+    return response.data;
   }
 };
 
 export default authApi;
+

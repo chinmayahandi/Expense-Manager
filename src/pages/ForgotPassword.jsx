@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useExpense } from "../context/ExpenseContext";
 import { LuMail, LuWallet, LuArrowLeft, LuSend } from "react-icons/lu";
 import Button from "../components/Button";
+import authApi from "../api/authApi";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -10,17 +11,29 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState(null);
   const [isSent, setIsSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleReset = (e) => {
+  const handleReset = async (e) => {
     e.preventDefault();
     if (!email) {
       setError("Email address is required");
       return;
     }
 
-    // Mock send recovery email
-    showToast("Password reset email sent successfully!", "success");
-    setIsSent(true);
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await authApi.forgotPassword(email);
+      showToast("Password reset email sent successfully!", "success");
+      setIsSent(true);
+    } catch (err) {
+      console.error("Forgot password failure:", err);
+      const errMsg = err.response?.data?.message || err.message || "Failed to send recovery link";
+      showToast(errMsg, "error");
+      setError(errMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,6 +67,7 @@ const ForgotPassword = () => {
                   setEmail(e.target.value);
                   if (error) setError(null);
                 }}
+                disabled={isSubmitting}
                 placeholder="name@example.com"
                 className={`w-full px-4 py-2.5 text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
                   error
@@ -69,8 +83,9 @@ const ForgotPassword = () => {
               variant="primary"
               className="w-full mt-4 font-semibold text-sm cursor-pointer"
               icon={LuSend}
+              disabled={isSubmitting}
             >
-              Send Reset Link
+              {isSubmitting ? "Sending..." : "Send Reset Link"}
             </Button>
           </form>
         ) : (
@@ -94,3 +109,4 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
+
