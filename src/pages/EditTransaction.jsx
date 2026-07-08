@@ -1,0 +1,350 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useExpense } from "../context/ExpenseContext";
+import transactionApi from "../api/transactionApi";
+import { CATEGORIES } from "../data/dummyData";
+import { motion } from "framer-motion";
+import { LuCheck, LuChevronLeft, LuCircleAlert } from "react-icons/lu";
+import Button from "../components/Button";
+import EmptyState from "../components/EmptyState";
+import Loader from "../components/Loader";
+
+const EditTransaction = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { updateTransaction, settings } = useExpense();
+
+  // Loading and error states for fetching single txn from DB
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  
+  // Track original transaction details for dirty checking
+  const [initialTxn, setInitialTxn] = useState(null);
+
+  // Form State
+  const [type, setType] = useState("expense");
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [date, setDate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Fetch transaction on mount
+  useEffect(() => {
+    const fetchTransactionDetails = async () => {
+      try {
+        setLoading(true);
+        const data = await transactionApi.getById(id);
+        if (data.success && data.transaction) {
+          const t = data.transaction;
+          setInitialTxn(t);
+          setType(t.type);
+          setTitle(t.title);
+          setAmount(t.amount.toString());
+          setCategory(t.category);
+          setDate(t.date);
+          setNotes(t.notes || "");
+        } else {
+          setLoadError("Transaction data is invalid.");
+        }
+      } catch (err) {
+        console.error("Failed to load transaction details:", err);
+        setLoadError("Transaction not found or access unauthorized.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactionDetails();
+  }, [id]);
+
+  // Reset category if type switches
+  const handleTypeChange = (newType) => {
+    if (isSubmitting) return;
+    setType(newType);
+    setCategory(CATEGORIES[newType][0] || "");
+    if (errors.type) {
+      setErrors((prev) => ({ ...prev, type: null }));
+    }
+  };
+
+  // Form Validation
+  const validateForm = () => {
+    const newErrors = {};
+    if (!title.trim()) {
+      newErrors.title = "Transaction title is required.";
+    }
+    if (!amount) {
+      newErrors.amount = "Amount is required.";
+    } else if (isNaN(amount) || parseFloat(amount) <= 0) {
+      newErrors.amount = "Please enter a valid positive number.";
+    }
+    if (!category) {
+      newErrors.category = "Please select a category.";
+    }
+    if (!date) {
+      newErrors.date = "Please select a date.";
+    } else {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      selectedDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate > today) {
+        newErrors.date = "Future dates are not allowed.";
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Check if inputs have been modified
+  const isDirty = initialTxn && (
+    title !== initialTxn.title ||
+    amount !== initialTxn.amount.toString() ||
+    type !== initialTxn.type ||
+    category !== initialTxn.category ||
+    date !== initialTxn.date ||
+    notes !== (initialTxn.notes || "")
+  );
+
+  const handleBack = () => {
+    if (isDirty) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+        navigate(-1);
+      }
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      await updateTransaction(id, {
+        title,
+        amount: parseFloat(amount),
+        type,
+        category,
+        date,
+        notes
+      });
+      navigate("/transactions");
+    } catch (err) {
+      console.error("Failed to update transaction:", err);
+      if (err.response?.data?.errors) {
+        const mappedErrors = {};
+        err.response.data.errors.forEach(e => {
+          mappedErrors[e.field] = e.message;
+        });
+        setErrors(mappedErrors);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Show page loader while fetching from API
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <Loader type="spinner" />
+      </div>
+    );
+  }
+
+  // Show error if transaction doesn't exist
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto py-12">
+        <EmptyState
+          title="Transaction Not Found"
+          message={loadError}
+          actionLabel="Back to Transactions"
+          onAction={() => navigate("/transactions")}
+          icon={LuCircleAlert}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Back navigation header */}
+      <section className="flex items-center gap-3">
+        <button
+          onClick={handleBack}
+          disabled={isSubmitting}
+          className="p-2 bg-white border border-slate-100 hover:bg-slate-50 transition-colors rounded-xl text-slate-500 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Go back"
+        >
+          <LuChevronLeft className="text-lg" />
+        </button>
+        <div>
+          <h2 className="font-display font-bold text-slate-800 text-lg md:text-xl mt-0 mb-0.5 tracking-tight">
+            Edit Transaction
+          </h2>
+          <p className="text-xs text-slate-500">Modify transaction details and updates in database.</p>
+        </div>
+      </section>
+
+      {/* Form Card */}
+      <motion.form
+        onSubmit={handleUpdate}
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white border border-slate-100 p-6 rounded-2xl shadow-card space-y-6"
+      >
+        {/* Type Toggle sliding tab */}
+        <div className="flex justify-center">
+          <div className="inline-flex bg-slate-100 p-1 rounded-xl relative w-full sm:max-w-xs">
+            {["expense", "income"].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => handleTypeChange(t)}
+                disabled={isSubmitting}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg capitalize transition-all duration-200 cursor-pointer relative z-10 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  type === t ? "text-slate-800 font-semibold" : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                {type === t && (
+                  <motion.div
+                    layoutId="activeFormTab"
+                    className="absolute inset-0 bg-white shadow-sm rounded-lg -z-10"
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                  />
+                )}
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Title */}
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Transaction Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Whole Foods Groceries"
+              disabled={isSubmitting}
+              className={`w-full px-4 py-2.5 text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
+                errors.title
+                  ? "border-red-400 focus:ring-red-400/5 focus:border-red-400"
+                  : "border-slate-200 focus:border-brand focus:ring-4 focus:ring-brand/5"
+              } text-slate-800 disabled:opacity-50`}
+            />
+            {errors.title && <p className="text-[11px] text-red-500 font-medium">{errors.title}</p>}
+          </div>
+
+          {/* Amount */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Amount
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
+                <span className="text-sm font-semibold">{settings.currency}</span>
+              </div>
+              <input
+                type="number"
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                disabled={isSubmitting}
+                className={`w-full pl-9 pr-4 py-2.5 text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
+                  errors.amount
+                    ? "border-red-400 focus:ring-red-400/5 focus:border-red-400"
+                    : "border-slate-200 focus:border-brand focus:ring-4 focus:ring-brand/5"
+                } text-slate-800 font-display disabled:opacity-50`}
+              />
+            </div>
+            {errors.amount && <p className="text-[11px] text-red-500 font-medium">{errors.amount}</p>}
+          </div>
+
+          {/* Category Dropdown */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              disabled={isSubmitting}
+              className={`w-full px-4 py-2.5 text-sm bg-white border rounded-xl outline-none transition-all duration-200 appearance-none cursor-pointer ${
+                errors.category
+                  ? "border-red-400 focus:ring-red-400/5 focus:border-red-400"
+                  : "border-slate-200 focus:border-brand focus:ring-4 focus:ring-brand/5"
+              } text-slate-700 disabled:opacity-50`}
+            >
+              {CATEGORIES[type] && CATEGORIES[type].map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            {errors.category && <p className="text-[11px] text-red-500 font-medium">{errors.category}</p>}
+          </div>
+
+          {/* Date Picker */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Date
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={isSubmitting}
+              className={`w-full px-4 py-2.5 text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
+                errors.date
+                  ? "border-red-400 focus:ring-red-400/5 focus:border-red-400"
+                  : "border-slate-200 focus:border-brand focus:ring-4 focus:ring-brand/5"
+              } text-slate-700 disabled:opacity-50`}
+            />
+            {errors.date && <p className="text-[11px] text-red-500 font-medium">{errors.date}</p>}
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Notes (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Provide details about this entry..."
+              disabled={isSubmitting}
+              className="w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all duration-200 text-slate-800 resize-none disabled:opacity-50"
+            />
+          </div>
+        </div>
+
+        {/* Buttons Panel */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-50">
+          <Button variant="outline" size="sm" onClick={handleBack} disabled={isSubmitting} className="cursor-pointer">
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" size="sm" icon={LuCheck} disabled={isSubmitting} className="cursor-pointer">
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </motion.form>
+    </div>
+  );
+};
+
+export default EditTransaction;
