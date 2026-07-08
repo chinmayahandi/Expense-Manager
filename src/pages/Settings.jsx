@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useExpense } from "../context/ExpenseContext";
 import { useAuth } from "../context/AuthContext";
 import { CURRENCIES, LANGUAGES } from "../data/dummyData";
@@ -11,13 +12,15 @@ import {
   LuInfo,
   LuCheck,
   LuCircleAlert,
-  LuEye
+  LuEye,
+  LuLogOut
 } from "react-icons/lu";
 import Button from "../components/Button";
 
 const Settings = () => {
-  const { settings, updateSettings } = useExpense();
-  const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
+  const { settings, updateSettings, showToast } = useExpense();
+  const { user, updateUser, logout, isLoggedIn } = useAuth();
 
   // Local settings form state
   const [userName, setUserName] = useState(user && user.full_name ? user.full_name : "User");
@@ -83,9 +86,23 @@ const Settings = () => {
             <div className="relative w-24 h-24 rounded-2xl overflow-hidden shadow-md border-2 border-slate-100">
               <img src={userAvatar} alt="Profile avatar" className="w-full h-full object-cover" />
             </div>
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center">
               <h4 className="font-semibold text-sm text-slate-800">{user && user.full_name ? user.full_name : "User"}</h4>
               <p className="text-[10px] text-slate-400 font-semibold uppercase">Premium Profile</p>
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    showToast("Logged out successfully!", "info");
+                    navigate("/login");
+                  }}
+                  className="lg:hidden flex items-center justify-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50/50 bg-red-50/30 px-3 py-1.5 rounded-xl border border-red-100/50 transition-all duration-200 cursor-pointer mt-2.5 w-full max-w-[140px]"
+                >
+                  <LuLogOut className="text-sm shrink-0" />
+                  <span>Log Out</span>
+                </button>
+              )}
             </div>
           </div>
 
