@@ -47,8 +47,8 @@ const Signup = () => {
 
     setIsSubmitting(true);
     try {
-      await register(name, email, password);
-      showToast("Profile created successfully! Please check your email to verify your account.", "success");
+      const res = await register(name, email, password);
+      showToast(res.message || "Signup successful. Please check your email to verify your account.", "success");
       navigate(`/check-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       console.error("Signup failure:", err);

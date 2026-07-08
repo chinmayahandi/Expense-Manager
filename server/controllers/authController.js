@@ -50,7 +50,7 @@ export const registerUser = async (req, res) => {
       .single();
 
     if (insertError || !newUser) {
-      console.error("Supabase insert user error:", insertError?.message);
+      console.error("Supabase insert user error:", insertError?.message || insertError);
       return res.status(500).json({
         success: false,
         message: "Failed to create user account"
@@ -58,20 +58,22 @@ export const registerUser = async (req, res) => {
     }
 
     // Send verification email using Resend
-    await sendVerificationEmail(email, full_name, token);
+    try {
+      await sendVerificationEmail(email, full_name, token);
+    } catch (emailError) {
+      console.error("Register verification email sending error:", emailError);
+      return res.status(201).json({
+        success: true,
+        message: "Account created but verification email failed. Please use resend verification."
+      });
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful. Please check your email to verify your account.",
-      user: {
-        id: newUser.id,
-        full_name: newUser.full_name,
-        email: newUser.email,
-        created_at: newUser.created_at
-      }
+      message: "Signup successful. Please check your email to verify your account."
     });
-  } catch (err) {
-    console.error("Register user controller error:", err.message);
+  } catch (error) {
+    console.error("Register error:", error);
     return res.status(500).json({
       success: false,
       message: "Server error occurred during registration"
