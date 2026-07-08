@@ -40,14 +40,6 @@ const authApi = {
       password
     });
     return response.data;
-  },
-
-  // Resend email verification
-  resendVerification: async (email) => {
-    const response = await axiosInstance.post("/auth/resend-verification", {
-      email
-    });
-    return response.data;
   }
 };
 

@@ -84,7 +84,12 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const data = await authApi.register(fullName, email, password);
-      if (data.success) {
+      if (data.success && data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("isLoggedIn", "true");
+        setUser(data.user);
+        setIsLoggedIn(true);
         return data;
       } else {
         throw new Error(data.message || "Registration failed");

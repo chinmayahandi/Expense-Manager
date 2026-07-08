@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useExpense } from "../context/ExpenseContext";
 import { useAuth } from "../context/AuthContext";
 import { LuMail, LuLock, LuWallet, LuArrowRight } from "react-icons/lu";
@@ -7,7 +7,6 @@ import Button from "../components/Button";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { showToast } = useExpense();
   const { login } = useAuth();
   
@@ -21,21 +20,7 @@ const Login = () => {
       showToast("Your session has expired. Please log in again.", "error");
       localStorage.removeItem("session_expired");
     }
-
-    const verified = searchParams.get("verified");
-    const errorType = searchParams.get("error");
-    if (verified === "true") {
-      showToast("Email verified successfully! You can now log in.", "success");
-      navigate("/login", { replace: true });
-    } else if (verified === "false") {
-      if (errorType === "expired") {
-        showToast("Verification link has expired. Please request a new one.", "error");
-      } else {
-        showToast("Email verification failed. The link may be invalid or expired.", "error");
-      }
-      navigate("/login", { replace: true });
-    }
-  }, [searchParams, showToast, navigate]);
+  }, [showToast]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
